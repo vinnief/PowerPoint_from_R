@@ -7,17 +7,26 @@ library(rvest)
 
 # IMDB's Clint Eastwood page
 clint_url <- "http://www.imdb.com/name/nm0000142/"
+#IMDB's Caterine Frot page
+Actor_url  <-"http://www.imdb.com/name/nm0634159/" #Philippe Noiret
+Actor_url  <- "http://www.imdb.com/name/nm0296594/" #Frot
 
 #Set your local path here
-local_path <- "C://"
-local_file <- paste0(local_path,"//Clint Eastwood - IMDb.html")
-test_page <- html(local_file)
-clint_page <- html(clint_url)
+local_path <- getwd() #"C://"
+local_file <- paste0(local_path,"/Clint Eastwood - IMDb.html") #was //
+local_file <- paste0(local_path,"/Catherine Frot - IMDb.html") #was //
+
+test_page <- read_html(local_file)
+#clint_page <- read_html(clint_url) #html deprecated
+Actor_page <- read_html(Actor_url) #anonymous, now only need change acthor URL
+Actor_name<- (Actor_page %>% html_nodes('.itemprop')%>% html_text() %>% str_trim())[[1]]
+#xpath="//*[contains(concat( "" "", @class, "" "" ), concat( "" "", ""itemprop"", "" "" ))]")
 
 #film_selector <- ".filmo-row"
 film_selector <- "#filmo-head-actor+ .filmo-category-section .filmo-row"
-filmography <- clint_page %>% html_nodes(film_selector)
-
+#filmography <- clint_page %>% html_nodes(film_selector)
+film_selector <- "#filmo-head-actress+ .filmo-category-section .filmo-row"
+filmography <- Actor_page %>% html_nodes(film_selector)
 # Remove "TV Series" & "TV Movie" from the data
 filmography <- filmography[-grep("TV Movie|TV Series",html_text(filmography))]
 
@@ -29,18 +38,19 @@ films$url <- paste0("http://www.imdb.com",filmography %>% html_nodes("b a") %>% 
 films <- as.data.frame(films,stringsAsFactors=FALSE)
 
 # Create the img sub-directory
-if (!file.exists("img")) dir.create("img")
+img_dir<- paste(Actor_name,"img",sep=".")
+if (!file.exists(img_dir)) dir.create(img_dir)
 #Create an index so the dataframe can be sorted back.
 films$index <- sprintf("%02d",seq_along(1:length(films$year)))
 
-films$img_file <- paste0("img/img",films$index,".jpg")
+films$img_file <- paste0(img_dir,"/img",films$index,".jpg")
 
 # Extract the character name and add to dataframe
 get_character <- function(film,filmography) {
     i <- as.integer(film$index)
     character_name <- filmography[i] %>% html_nodes(xpath=".//a[2]") %>% html_text()
     if (length(character_name)==0) {
-        character_name <- filmography[[i]] %>% 
+        character_name <- filmography[[i]] %>%
                             html_nodes(xpath="text()[preceding-sibling::br]") %>%
                             html_text() %>%
                             str_trim() %>%
@@ -54,12 +64,12 @@ films$character_name <- daply(films,.(index),get_character,filmography)
 # Loop through the films and download the poster image into the "img" subdirectory.
 # If the poster is not found, flag the file name with 0.
 for (i in 1:nrow(films)) {
-    img_node <- html(films$url[i]) %>% 
+    img_node <- read_html(films$url[i]) %>%
                 html_nodes(xpath='//td[@id="img_primary"]//img')
     if (length(img_node)==0) {
-        films$img_file[i] <- "img/img00.jpg"
-        cat(i," : img file NOT FOUND: ",films$img_file[i],"\n")
-    } 
+        films$img_file[i] <- "img00.jpg"
+        cat(i," : img file NOT FOUND: using",films$img_file[i],"\n")
+    }
     else {
         img_link <- html_attr(img_node,"src")
         cat(i," :",films$img_file[i]," : ",img_link,"\n")
@@ -68,18 +78,20 @@ for (i in 1:nrow(films)) {
 }
 
 # Check which of the files were not found and download them manually
-films$title[which(films$img_file=="img/img00.jpg")]
+films$title[which(films$img_file=="img00.jpg")]
 
 # These images don't exist.  Download manually
-films[55,"img_file"] <- "img/img55.jpg"
-films[54,"img_file"] <- "img/img54.jpg"
-films[52,"img_file"] <- "img/img52.jpg"
+if(Actor_name="Clint Eastwood"){
+  films[55,"img_file"] <- "img/img55.jpg"
+  films[54,"img_file"] <- "img/img54.jpg"
+  films[52,"img_file"] <- "img/img52.jpg"
 
-# Correct this title (appears with strange characters because of my locale)
-films[40,"title"] <- "Kelly's Heroes"
-
+  # Correct this title (appears with strange characters because of my locale)
+  films[40,"title"] <- "Kelly's Heroes"
+}
 # Save the data frame
-write.table(films,file="eastwood_films.csv",append=FALSE,quote=TRUE,sep="\t",row.names=FALSE)
+
+write.table(films,file=paste(Actor_name,"films.csv",sep="_"),append=FALSE,quote=TRUE,sep="\t",row.names=FALSE)
 
 #------------------------------------- Films dataframe done -------------------------------------#
 
@@ -87,7 +99,9 @@ write.table(films,file="eastwood_films.csv",append=FALSE,quote=TRUE,sep="\t",row
 # =====================================Create a dataframe for box office earnings data ========#
 ##  Get box office earnings data for the films
 clint_box_office_url <- "http://www.boxofficemojo.com/people/chart/?id=clinteastwood.htm"
-bo_page <- html(clint_box_office_url)
+
+box_office_url <- paste("http://www.boxofficemojo.com/people/chart/?id=",gsub(" ","",Actor_name),".htm",sep="")
+box_office_page <- read_html(box_office_url)
 # Extract tables. The fourth table is the one we want, with adjusted box office returns
 bo <- box_office_page %>% html_table(header=TRUE,fill=TRUE) %>% (function(x) {x[[4]]})
 
