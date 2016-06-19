@@ -111,7 +111,7 @@ bo$adjusted_gross <- as.numeric(gsub("[\\$\\,]","",bo$adjusted_gross))
 bo$unadjusted_gross <- as.numeric(gsub("[\\$\\,]","",bo$unadjusted_gross))
 bo$release_date <- strptime(bo$release_date,"%m/%d/%y")
 bo$release_date[32] <- strptime("1975-06-15",format("%Y-%m-%d"))
-bo$release_date <- correct_date(box_office$release_date)
+#bo$release_date <- correct_date(box_office$release_date)
 
 # Create a key for joining dataframes using the film title
 bo$key <- tolower(gsub("[^[:alnum:]]", "", bo$title))
@@ -121,5 +121,6 @@ bo$key[34] <- "therookie"
 # Create a dataframe for the box office gross for the movies
 box_office <- left_join(select(bo,bo_rank,studio,adjusted_gross,key),select(films,year,title,index,key),by="key")
 
-# Save the box_office data frame.
-write.table(box_office,file="eastwood_box_office.csv",append=FALSE,quote=TRUE,sep="\t",row.names=FALSE)
+# Save the box_office data frame. twice, as tsv and as csv. note the csv when opened might produce problems with commas in titles.
+write.table(box_office,file=paste(local_path,"eastwood_box_office.tsv", sep="/"),append=FALSE,quote=TRUE,sep="\t",row.names=FALSE)
+write.table(box_office,file=paste(local_path,"eastwood_box_office.csv", sep="/"),append=FALSE,quote=TRUE,sep=",",row.names=FALSE)
