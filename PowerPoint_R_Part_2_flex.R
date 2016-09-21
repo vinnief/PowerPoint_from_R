@@ -9,7 +9,7 @@ library(rvest)
 clint_url <- "http://www.imdb.com/name/nm0000142/"
 #IMDB's Caterine Frot page
 Actor_url  <-"http://www.imdb.com/name/nm0634159/" #Philippe Noiret
-Actor_url  <- "http://www.imdb.com/name/nm0296594/" #Frot
+Actor_url  <- "http://www.imdb.com/name/nm0296594/" #Catherine Frot
 
 #Set your local path here
 local_path <- getwd() #"C://"
